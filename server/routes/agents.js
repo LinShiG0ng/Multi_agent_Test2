@@ -1,6 +1,7 @@
 import express from 'express';
 import storage from '../utils/storage.js';
 import orchestrator from '../services/orchestrator.js';
+import aiService from '../services/aiService.js';
 
 const router = express.Router();
 
@@ -53,7 +54,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, id, systemPrompt, callable, whenToCall, mcpTools, builtinTools } = req.body;
+    const { name, id, systemPrompt, callable, whenToCall, mcpTools, builtinTools, aiProvider, aiModel } = req.body;
 
     // 验证必填字段
     if (!name || !id || callable === undefined || !whenToCall) {
@@ -70,7 +71,9 @@ router.post('/', async (req, res) => {
       callable,
       whenToCall,
       mcpTools: mcpTools || [],
-      builtinTools: builtinTools || []
+      builtinTools: builtinTools || [],
+      aiProvider: aiProvider || null,
+      aiModel: aiModel || null
     });
 
     res.status(201).json({
@@ -132,6 +135,24 @@ router.get('/callable/list', async (req, res) => {
     res.json({
       success: true,
       data: agents
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 获取可用的AI提供商列表
+ */
+router.get('/ai-providers/list', async (req, res) => {
+  try {
+    const providers = aiService.getAvailableProviders();
+    res.json({
+      success: true,
+      data: providers
     });
   } catch (error) {
     res.status(500).json({

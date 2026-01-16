@@ -6,7 +6,8 @@ const state = {
   agents: [],
   conversationHistory: [],
   isEditMode: false,
-  currentEditId: null
+  currentEditId: null,
+  aiProviders: []
 };
 
 // 初始化应用
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeAgentModal();
   initializeChat();
+  loadAiProviders();
   loadAgents();
 });
 
@@ -42,6 +44,67 @@ function initializeTabs() {
         loadAgents();
       }
     });
+  });
+}
+
+// ========== AI提供商管理 ==========
+async function loadAiProviders() {
+  try {
+    const response = await fetch(`${API_BASE}/agents/ai-providers/list`);
+    const result = await response.json();
+
+    if (result.success) {
+      state.aiProviders = result.data;
+      populateAiProviderSelect();
+    }
+  } catch (error) {
+    console.error('加载AI提供商失败:', error);
+  }
+}
+
+function populateAiProviderSelect() {
+  const select = document.getElementById('agentAiProvider');
+  if (!select) return;
+
+  // 清空现有选项（保留默认选项）
+  select.innerHTML = '<option value="">使用默认提供商</option>';
+
+  // 添加AI提供商选项
+  state.aiProviders.forEach(provider => {
+    const option = document.createElement('option');
+    option.value = provider.id;
+    option.textContent = provider.name;
+    option.dataset.models = JSON.stringify(provider.models);
+    select.appendChild(option);
+  });
+}
+
+function updateModelSelect(providerId) {
+  const modelGroup = document.getElementById('aiModelGroup');
+  const modelSelect = document.getElementById('agentAiModel');
+
+  if (!providerId) {
+    modelGroup.style.display = 'none';
+    return;
+  }
+
+  const provider = state.aiProviders.find(p => p.id === providerId);
+  if (!provider || !provider.models) {
+    modelGroup.style.display = 'none';
+    return;
+  }
+
+  // 显示模型选择
+  modelGroup.style.display = 'block';
+
+  // 清空并填充模型选项
+  modelSelect.innerHTML = '<option value="">使用默认模型</option>';
+
+  provider.models.forEach(model => {
+    const option = document.createElement('option');
+    option.value = model;
+    option.textContent = model;
+    modelSelect.appendChild(option);
   });
 }
 
@@ -107,6 +170,13 @@ function renderAgents() {
         </div>
       ` : ''}
 
+      ${agent.aiProvider ? `
+        <div class="agent-info">
+          <div class="agent-label">AI提供商：</div>
+          <div class="agent-text">${escapeHtml(agent.aiProvider)}${agent.aiModel ? ` (${escapeHtml(agent.aiModel)})` : ''}</div>
+        </div>
+      ` : ''}
+
       <div class="agent-actions">
         <button class="btn btn-primary btn-sm" onclick="editAgent('${escapeHtml(agent.id)}')">编辑</button>
         <button class="btn btn-danger btn-sm" onclick="deleteAgent('${escapeHtml(agent.id)}', '${escapeHtml(agent.name)}')">删除</button>
@@ -143,6 +213,14 @@ function initializeAgentModal() {
   callableCheckbox.addEventListener('change', (e) => {
     callableLabel.textContent = e.target.checked ? '允许调用' : '不允许调用';
   });
+
+  // AI提供商选择
+  const providerSelect = document.getElementById('agentAiProvider');
+  if (providerSelect) {
+    providerSelect.addEventListener('change', (e) => {
+      updateModelSelect(e.target.value);
+    });
+  }
 
   // 表单提交
   form.addEventListener('submit', async (e) => {
@@ -192,6 +270,19 @@ function openAgentModal(agentId = null) {
           if (checkbox) checkbox.checked = true;
         });
       }
+
+      // 设置AI提供商和模型
+      if (agent.aiProvider) {
+        document.getElementById('agentAiProvider').value = agent.aiProvider;
+        updateModelSelect(agent.aiProvider);
+
+        // 等待模型列表加载后设置模型
+        setTimeout(() => {
+          if (agent.aiModel) {
+            document.getElementById('agentAiModel').value = agent.aiModel;
+          }
+        }, 0);
+      }
     }
   } else {
     // 创建模式
@@ -200,6 +291,10 @@ function openAgentModal(agentId = null) {
     modalTitle.textContent = '创建智能体';
     document.getElementById('agentCallable').checked = true;
     document.getElementById('callableLabel').textContent = '允许调用';
+
+    // 重置AI提供商选择
+    document.getElementById('agentAiProvider').value = '';
+    document.getElementById('aiModelGroup').style.display = 'none';
   }
 
   modal.classList.add('show');
@@ -235,6 +330,10 @@ async function saveAgent() {
     const builtinTools = Array.from(document.querySelectorAll('input[name="builtinTools"]:checked'))
       .map(cb => cb.value);
 
+    // 收集AI提供商和模型
+    const aiProvider = document.getElementById('agentAiProvider').value || null;
+    const aiModel = document.getElementById('agentAiModel').value || null;
+
     const agentData = {
       name,
       id,
@@ -242,7 +341,9 @@ async function saveAgent() {
       whenToCall,
       callable,
       mcpTools,
-      builtinTools
+      builtinTools,
+      aiProvider,
+      aiModel
     };
 
     let response;

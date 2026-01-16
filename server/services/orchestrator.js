@@ -1,9 +1,12 @@
-import claudeService from './claudeService.js';
+import aiService from './aiService.js';
 import storage from '../utils/storage.js';
 import mcpService from './mcpService.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -117,8 +120,14 @@ class Orchestrator {
       // 获取智能体的工具列表
       const tools = await this.getAgentTools(agent);
 
-      // 调用Claude API
-      const response = await claudeService.chat({
+      // 获取AI提供商和模型配置
+      const provider = agent.aiProvider || process.env.DEFAULT_AI_PROVIDER || 'claude';
+      const model = agent.aiModel || null;
+
+      // 调用AI服务
+      const response = await aiService.chat({
+        provider,
+        model,
         systemPrompt,
         messages,
         tools,
@@ -139,7 +148,9 @@ class Orchestrator {
           content: toolResults
         });
 
-        const finalResponse = await claudeService.chat({
+        const finalResponse = await aiService.chat({
+          provider,
+          model,
           systemPrompt,
           messages,
           tools,
@@ -248,8 +259,12 @@ class Orchestrator {
         }
       ];
 
+      // 总指挥使用的AI提供商（默认使用环境变量配置）
+      const orchestratorProvider = process.env.DEFAULT_AI_PROVIDER || 'claude';
+
       // 调用总指挥智能体
-      let response = await claudeService.chat({
+      let response = await aiService.chat({
+        provider: orchestratorProvider,
         systemPrompt,
         messages,
         tools: agentTools,
@@ -297,7 +312,8 @@ class Orchestrator {
         });
 
         // 继续对话
-        response = await claudeService.chat({
+        response = await aiService.chat({
+          provider: orchestratorProvider,
           systemPrompt,
           messages,
           tools: agentTools,

@@ -176,6 +176,22 @@
           <small style="color: var(--text-secondary); font-size: 12px;">选择此智能体可以使用的内置工具</small>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">AI提供商</label>
+          <select class="form-select" id="agentAiProvider">
+            <option value="">使用默认提供商</option>
+          </select>
+          <small style="color: var(--text-secondary); font-size: 12px;">选择该智能体使用的AI提供商（留空则使用系统默认）</small>
+        </div>
+
+        <div class="form-group" id="aiModelGroup" style="display: none;">
+          <label class="form-label">AI模型</label>
+          <select class="form-select" id="agentAiModel">
+            <option value="">使用默认模型</option>
+          </select>
+          <small style="color: var(--text-secondary); font-size: 12px;">选择该智能体使用的具体模型（留空则使用提供商默认模型）</small>
+        </div>
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancelBtn">取消</button>
           <button type="submit" class="btn btn-primary" id="submitBtn">

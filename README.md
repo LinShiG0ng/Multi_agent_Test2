@@ -6,6 +6,8 @@
 
 - **总指挥智能体架构**：通过一个总指挥智能体统筹调度多个子智能体
 - **自定义智能体**：用户可以灵活创建和配置自己的智能体
+- **多AI提供商支持**：同时支持Claude和OpenAI（以及兼容OpenAI格式的API）
+- **灵活模型选择**：每个智能体可以独立选择AI提供商和模型
 - **MCP工具支持**：集成MCP（Model Context Protocol）工具
 - **内置工具系统**：支持内置工具扩展
 - **智能调度**：总指挥智能体根据用户需求自动选择合适的智能体
@@ -24,6 +26,8 @@
 5. **何时调用**（必填）：描述在什么情况下应该调用该智能体
 6. **MCP工具**（选填）：智能体可使用的MCP工具列表
 7. **内置工具**（选填）：智能体可使用的内置工具列表
+8. **AI提供商**（选填）：该智能体使用的AI提供商（claude/openai），留空使用系统默认
+9. **AI模型**（选填）：该智能体使用的具体模型，留空使用提供商默认模型
 
 ### 工作流程
 
@@ -35,7 +39,9 @@
 
 - Node.js >= 18.0.0
 - npm >= 9.0.0
-- Claude API密钥（Anthropic API Key）
+- 至少一个AI提供商的API密钥：
+  - Claude API密钥（Anthropic API Key），或
+  - OpenAI API密钥（也支持兼容OpenAI格式的其他API服务）
 
 ## 🚀 快速开始
 
@@ -53,12 +59,28 @@ npm install
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的Claude API密钥：
+编辑 `.env` 文件，配置AI提供商的API密钥：
 
 ```env
-ANTHROPIC_API_KEY=your_api_key_here
+# Claude API配置
+ANTHROPIC_API_KEY=your_claude_api_key_here
+
+# OpenAI API配置（可选，支持OpenAI或兼容格式的API）
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_BASE=https://api.openai.com/v1
+OPENAI_DEFAULT_MODEL=gpt-4
+
+# 默认AI提供商 (claude 或 openai)
+DEFAULT_AI_PROVIDER=claude
+
+# 服务器配置
 PORT=3000
 ```
+
+**注意**：
+- 至少需要配置一个AI提供商的API密钥
+- 可以同时配置多个提供商，在创建智能体时选择使用哪个
+- `OPENAI_API_BASE` 可以配置为其他兼容OpenAI格式的API地址（如Azure OpenAI、国内的API服务等）
 
 ### 3. 启动服务
 
@@ -90,6 +112,8 @@ npm run dev
    - **是否可被调用**：开启此选项，允许总指挥智能体调用
    - **MCP工具**：选择该智能体可以使用的MCP工具
    - **内置工具**：选择该智能体可以使用的内置工具
+   - **AI提供商**：选择该智能体使用的AI提供商（Claude或OpenAI），留空则使用系统默认
+   - **AI模型**：选择具体的AI模型，留空则使用提供商的默认模型
 4. 点击"保存"
 
 ### 使用对话功能
@@ -132,6 +156,70 @@ vim server/orchestrator-prompt.txt
 ```
 
 修改后重启服务即可生效。
+
+## 🤖 AI提供商配置
+
+系统支持多个AI提供商，可以根据需求灵活选择。
+
+### 支持的AI提供商
+
+1. **Claude (Anthropic)**
+   - 模型：claude-3-5-sonnet-20241022, claude-3-opus, claude-3-sonnet, claude-3-haiku
+   - 配置：`ANTHROPIC_API_KEY`
+
+2. **OpenAI**
+   - 模型：gpt-4, gpt-4-turbo, gpt-4o, gpt-3.5-turbo
+   - 配置：`OPENAI_API_KEY` + `OPENAI_API_BASE`
+
+3. **兼容OpenAI格式的API**
+   - 可以配置 `OPENAI_API_BASE` 指向其他API服务
+   - 例如：Azure OpenAI、国内的兼容服务等
+
+### 配置方式
+
+#### 1. 系统默认配置
+
+在 `.env` 文件中设置默认提供商：
+
+```env
+DEFAULT_AI_PROVIDER=claude  # 或 openai
+```
+
+所有未指定提供商的智能体将使用此默认值。
+
+#### 2. 智能体独立配置
+
+创建智能体时，可以为每个智能体单独选择：
+- 在"AI提供商"下拉框中选择提供商
+- 选择提供商后，可以进一步选择具体的模型
+- 留空则使用系统默认配置
+
+### 使用场景示例
+
+**场景1：混合使用不同提供商**
+
+```
+智能体A (代码助手) → 使用 Claude 3.5 Sonnet（推理能力强）
+智能体B (快速问答) → 使用 GPT-3.5-turbo（速度快，成本低）
+智能体C (复杂任务) → 使用 GPT-4（综合能力强）
+```
+
+**场景2：使用国内API服务**
+
+```env
+OPENAI_API_KEY=your_api_key
+OPENAI_API_BASE=https://your-api-service.com/v1
+OPENAI_DEFAULT_MODEL=gpt-4
+```
+
+创建智能体时选择 "OpenAI" 提供商即可。
+
+### 成本优化建议
+
+- **简单任务**：使用 GPT-3.5-turbo 或 Claude 3 Haiku
+- **中等任务**：使用 Claude 3 Sonnet 或 GPT-4-turbo
+- **复杂任务**：使用 Claude 3.5 Sonnet 或 GPT-4
+- **总指挥智能体**：建议使用能力较强的模型（Claude 3.5 Sonnet 或 GPT-4）
 
 ## 📁 项目结构
 
