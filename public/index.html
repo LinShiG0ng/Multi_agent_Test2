@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多智能体协作系统</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>🤖 多智能体协作系统</h1>
+      <p>通过总指挥智能体统筹调度多个AI智能体进行协作</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 导航标签 -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="chat">💬 对话</button>
+      <button class="nav-tab" data-tab="agents">⚙️ 智能体管理</button>
+    </div>
+
+    <!-- 对话界面 -->
+    <div id="chat-tab" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">与总指挥智能体对话</h2>
+          <button class="btn btn-secondary btn-sm" id="clearChatBtn">清空对话</button>
+        </div>
+
+        <div class="alert alert-info">
+          <strong>提示：</strong>总指挥智能体会根据您的需求，自动调度合适的智能体来完成任务。
+        </div>
+
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="empty-state">
+              <div class="empty-state-icon">💭</div>
+              <div class="empty-state-text">开始与总指挥智能体对话</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-container">
+          <div class="chat-input-wrapper">
+            <textarea
+              class="chat-input"
+              id="chatInput"
+              placeholder="输入您的消息..."
+              rows="3"
+            ></textarea>
+            <button class="btn btn-primary" id="sendBtn">
+              <span id="sendBtnText">发送</span>
+              <span id="sendBtnLoading" class="loading" style="display: none;"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 智能体管理界面 -->
+    <div id="agents-tab" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">智能体管理</h2>
+          <button class="btn btn-primary" id="createAgentBtn">+ 创建智能体</button>
+        </div>
+
+        <div id="agentsContainer">
+          <div class="agents-grid" id="agentsList">
+            <!-- 智能体列表将动态加载 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 创建/编辑智能体模态框 -->
+  <div id="agentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">创建智能体</h3>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+
+      <form id="agentForm">
+        <input type="hidden" id="agentOriginalId">
+
+        <div class="form-group">
+          <label class="form-label required" for="agentName">名称</label>
+          <input
+            type="text"
+            class="form-input"
+            id="agentName"
+            placeholder="例如：代码助手"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required" for="agentId">英文标识（唯一ID）</label>
+          <input
+            type="text"
+            class="form-input"
+            id="agentId"
+            placeholder="例如：code_helper（仅支持字母、数字、下划线）"
+            pattern="[a-zA-Z0-9_]+"
+            required
+          >
+          <small style="color: var(--text-secondary); font-size: 12px;">用于标识智能体，必须唯一</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="agentSystemPrompt">提示词（System Prompt）</label>
+          <textarea
+            class="form-textarea"
+            id="agentSystemPrompt"
+            placeholder="描述这个智能体的角色和职责..."
+            rows="4"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required" for="agentWhenToCall">何时调用</label>
+          <textarea
+            class="form-textarea"
+            id="agentWhenToCall"
+            placeholder="描述在什么情况下应该调用这个智能体..."
+            rows="3"
+            required
+          ></textarea>
+          <small style="color: var(--text-secondary); font-size: 12px;">告诉总指挥智能体在什么场景下调用此智能体</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">是否可被其他智能体调用</label>
+          <div class="form-switch">
+            <label class="switch">
+              <input type="checkbox" id="agentCallable" checked>
+              <span class="slider"></span>
+            </label>
+            <span id="callableLabel">允许调用</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">MCP工具</label>
+          <div class="multi-select" id="mcpToolsSelect">
+            <label class="multi-select-item">
+              <input type="checkbox" name="mcpTools" value="filesystem"> 文件系统
+            </label>
+            <label class="multi-select-item">
+              <input type="checkbox" name="mcpTools" value="search"> 搜索
+            </label>
+            <label class="multi-select-item">
+              <input type="checkbox" name="mcpTools" value="calculator"> 计算器
+            </label>
+          </div>
+          <small style="color: var(--text-secondary); font-size: 12px;">选择此智能体可以使用的MCP工具</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">内置工具</label>
+          <div class="multi-select" id="builtinToolsSelect">
+            <label class="multi-select-item">
+              <input type="checkbox" name="builtinTools" value="open_page"> 打开页面
+            </label>
+            <label class="multi-select-item">
+              <input type="checkbox" name="builtinTools" value="show_dialog"> 显示对话框
+            </label>
+            <label class="multi-select-item">
+              <input type="checkbox" name="builtinTools" value="notification"> 发送通知
+            </label>
+          </div>
+          <small style="color: var(--text-secondary); font-size: 12px;">选择此智能体可以使用的内置工具</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">取消</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <span id="submitBtnText">保存</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
